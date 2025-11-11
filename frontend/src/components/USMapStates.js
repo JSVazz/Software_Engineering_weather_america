@@ -7,13 +7,14 @@ export default function USMapStates({
   mapWidth,
   mapHeight,
   stateTempMap,
-  getHeatColor
+  getHeatColor,
+  onStateClick,  // New prop
 }) {
   return (
     <ComposableMap projection="geoAlbersUsa" width={mapWidth} height={mapHeight}>
       <Geographies geography={geoUrlStates}>
         {({ geographies }) =>
-          geographies.map(geo => {
+          geographies.map((geo) => {
             const stateName = geo.properties.name;
             const temp = stateTempMap ? stateTempMap[stateName] : undefined;
             const fillColor = temp !== undefined ? getHeatColor(temp) : "#DDD";
@@ -25,6 +26,13 @@ export default function USMapStates({
                 fill={fillColor}
                 stroke="#000"
                 strokeWidth={0.5}
+                onClick={() => {
+                  if (onStateClick) {
+                    console.log("Clicked state:", stateName, "Value:", temp);
+                    onStateClick(stateName, temp);
+                  }
+                }}
+                style={{ cursor: onStateClick ? 'pointer' : 'default' }}
               />
             );
           })

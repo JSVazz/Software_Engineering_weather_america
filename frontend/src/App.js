@@ -12,6 +12,8 @@ export default function App() {
   const [mapIndex, setMapIndex] = useState(0);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [dataType, setDataType] = useState("AvgTempF");
+  const [selectedState, setSelectedState] = useState(null);
+  const [selectedStateValue, setSelectedStateValue] = useState(null);
 
   const typeLabel = {
     AvgTempF: "Temperature (°F)",
@@ -117,6 +119,10 @@ export default function App() {
                     mapHeight={MAP_HEIGHT}
                     stateTempMap={stateValueMap}
                     getHeatColor={v => getHeatColor(v, dataType)}
+                    onStateClick={(stateName, value) => {
+                      setSelectedState(stateName);
+                      setSelectedStateValue(value);
+                    }}
                   />
                   <div style={{ marginTop: 16, maxHeight: 250, overflowY: "auto" }}>
                     <h3>
@@ -129,6 +135,24 @@ export default function App() {
                         </li>
                       ))}
                     </ul>
+
+                    {/* Display clicked state info */}
+                    {selectedState && (
+                      <div style={{
+                        position: "fixed",
+                        bottom: 20,
+                        right: 20,
+                        backgroundColor: "white",
+                        padding: 10,
+                        border: "1px solid black",
+                        boxShadow: "0 0 10px rgba(0,0,0,0.3)",
+                        zIndex: 1000,
+                        maxWidth: 250
+                      }}>
+                        <strong>Selected State:</strong> {selectedState} <br />
+                        <strong>{typeLabel[dataType]}:</strong> {selectedStateValue?.toFixed(2)} {unit[dataType]}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
