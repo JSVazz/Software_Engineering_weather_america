@@ -4,6 +4,7 @@ import USMapBasic from "./components/USMapBasic";
 import USMapStates from "./components/USMapStates";
 import USMapWithStatesCounties from "./components/USMapWithStatesCounties";
 import WeatherDataLoader from "./components/WeatherDataLoader";
+import Legend from "./components/Legend";
 
 const MAP_HEIGHT = 750;
 const MAP_WIDTH = 1600;
@@ -98,6 +99,9 @@ export default function App() {
                 </select>
                 <span style={{ marginLeft: 16 }}>Current Date: <b>{selectedDate}</b></span>
               </div>
+
+              <Legend dataType={dataType} />
+              
               {mapIndex === 0 && (
                 <>
                   <USMapBasic
