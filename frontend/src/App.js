@@ -31,7 +31,7 @@ export default function App() {
 
   function getHeatColor(value, type) {
     if (type === "PrecipitationIn") {
-      const blue = Math.min(255, Math.floor((value / 6) * 255));
+      const blue = Math.min(255, Math.floor((value / 2) * 255));
       return `rgb(0, 0, ${blue})`;
     }
 
