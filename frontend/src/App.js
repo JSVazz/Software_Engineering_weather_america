@@ -5,46 +5,54 @@ import USMapStates from "./components/USMapStates";
 import USMapWithStatesCounties from "./components/USMapWithStatesCounties";
 import WeatherDataLoader from "./components/WeatherDataLoader";
 import Legend from "./components/Legend";
+import { aggregateClimateData } from "./components/AggClimateData.js";
 
 const MAP_HEIGHT = 750;
 const MAP_WIDTH = 1600;
 
+const monthsList = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
+const aggOptions = [
+  { value: "avg", label: "Average" },
+  { value: "variance", label: "Variance" },
+  { value: "min", label: "Minimum" },
+  { value: "max", label: "Maximum" },
+  { value: "median", label: "Median" },
+  { value: "sum", label: "Sum" }
+];
+const dataTypes = [
+  { value: "AvgTempF", label: "Temperature (°F)" },
+  { value: "PrecipitationIn", label: "Precipitation (in)" },
+  { value: "HumidityPct", label: "Humidity (%)" },
+  { value: "WindSpeedMph", label: "Wind Speed (mph)" }
+];
+
 export default function App() {
   const [mapIndex, setMapIndex] = useState(0);
-  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const [startMonth, setStartMonth] = useState("January");
+  const [endMonth, setEndMonth] = useState("December");
+  const [startYear, setStartYear] = useState(2015);
+  const [endYear, setEndYear] = useState(2024);
   const [dataType, setDataType] = useState("AvgTempF");
+  const [aggType, setAggType] = useState("avg");
   const [selectedState, setSelectedState] = useState(null);
   const [selectedStateValue, setSelectedStateValue] = useState(null);
 
-  const typeLabel = {
-    AvgTempF: "Temperature (°F)",
-    PrecipitationIn: "Precipitation (in)",
-    HumidityPct: "Humidity (%)",
-    WindSpeedMph: "Wind Speed (mph)"
-  };
-  const unit = {
-    AvgTempF: "°F",
-    PrecipitationIn: "in",
-    HumidityPct: "%",
-    WindSpeedMph: "mph"
-  };
-
   function getHeatColor(value, type) {
     if (type === "PrecipitationIn") {
-      const blue = Math.min(255, Math.floor((value / 2) * 255));
+      const blue = Math.min(255, Math.floor((value / 6) * 255));
       return `rgb(0, 0, ${blue})`;
     }
-
     if (type === "HumidityPct") {
       const green = Math.min(255, Math.floor((value / 100) * 255));
       return `rgb(0, ${green}, 0)`;
     }
-
     if (type === "WindSpeedMph") {
       const gray = Math.min(255, Math.floor((value / 20) * 255));
       return `rgb(${gray}, ${gray}, ${gray})`;
     }
-
     const red = Math.min(255, Math.floor((value / 100) * 255));
     const blue = 255 - red;
     return `rgb(${red}, 0, ${blue})`;
@@ -52,67 +60,171 @@ export default function App() {
 
   const handleNextMap = () => setMapIndex((prev) => (prev + 1) % 3);
 
+  const controlStyle = {
+    flex: "1 1 18%",
+    minWidth: 180,
+    display: "flex",
+    flexDirection: "column"
+  };
+
+  const inputSelectStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    fontSize: 18,
+    borderRadius: 6,
+    border: "1px solid #bbb",
+    marginTop: 6,
+    boxSizing: "border-box"
+  };
+
   return (
     <div>
       <h2>Climate America</h2>
       <WeatherDataLoader>
         {(allDates, weatherDataByDate) => {
-          const dateCount = allDates.length;
-          const dateIdx = Math.max(0, Math.min(selectedDateIndex, dateCount - 1));
-          const selectedDate = allDates[dateIdx];
-          const dataForDate = weatherDataByDate[selectedDate] || [];
+          const allRows = [];
+          const startMonthIdx = monthsList.indexOf(startMonth);
+          const endMonthIdx = monthsList.indexOf(endMonth);
 
-          // Prepare state-to-selected-type map
-          const stateValueMap = {};
-          dataForDate.forEach(row => {
-            stateValueMap[row.State] = Number(row[dataType]);
+          allDates.forEach(date => {
+            const [month, year] = date.split(" ");
+            const yearNum = parseInt(year);
+            const monthIdx = monthsList.indexOf(month);
+
+            const isInRange = (startYear < endYear) || (startYear === endYear && startMonthIdx <= endMonthIdx)
+              ? ((yearNum > startYear && yearNum < endYear) ||
+                 (yearNum === startYear && monthIdx >= startMonthIdx) ||
+                 (yearNum === endYear && monthIdx <= endMonthIdx))
+              : ((yearNum > startYear || (yearNum === startYear && monthIdx >= startMonthIdx)) ||
+                 (yearNum < endYear || (yearNum === endYear && monthIdx <= endMonthIdx)));
+
+            if (isInRange) {
+              weatherDataByDate[date]?.forEach(row => allRows.push(row));
+            }
           });
 
-          // UI Controls
-          function setDateBySearch(event) {
-            event.preventDefault();
-            const search = event.target.elements.dateSearch.value;
-            const idx = allDates.indexOf(search);
-            if (idx !== -1) setSelectedDateIndex(idx);
+          const stateValueMap = aggregateClimateData(allRows, {
+            startMonth, endMonth, startYear, endYear,
+            dataType, aggType
+          });
+
+          const countryValues = allRows
+            .map(row => Number(row[dataType]))
+            .filter(val => !isNaN(val));
+
+          let countryWideValue = null;
+          if (countryValues.length > 0) {
+            switch (aggType) {
+              case "avg":
+                countryWideValue = countryValues.reduce((a, b) => a + b, 0) / countryValues.length;
+                break;
+              case "min":
+                countryWideValue = Math.min(...countryValues);
+                break;
+              case "max":
+                countryWideValue = Math.max(...countryValues);
+                break;
+              case "variance":
+                const mean = countryValues.reduce((a, b) => a + b, 0) / countryValues.length;
+                countryWideValue = countryValues.reduce((a, b) => a + (b - mean) ** 2, 0) / (countryValues.length - 1 || 1);
+                break;
+              case "median":
+                const sorted = [...countryValues].sort((a,b) => a-b);
+                const mid = Math.floor(sorted.length / 2);
+                countryWideValue = (sorted.length % 2 === 0) ? (sorted[mid-1] + sorted[mid]) / 2 : sorted[mid];
+                break;
+              case "sum":
+                countryWideValue = countryValues.reduce((a,b) => a + b, 0);
+                break;
+              default:
+                countryWideValue = null;
+            }
           }
 
           return (
             <>
               {/* Controls */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-                <button onClick={() => setSelectedDateIndex(0)} disabled={dateIdx === 0}>&lt;&lt;</button>
-                <button onClick={() => setSelectedDateIndex(prev => Math.max(0, prev - 1))} disabled={dateIdx === 0}>&lt;</button>
-                <form onSubmit={setDateBySearch}>
-                  <input name="dateSearch" list="dateOptions" placeholder="Search" />
-                  <datalist id="dateOptions">
-                    {allDates.map((d, idx) => <option value={d} key={d}></option>)}
-                  </datalist>
-                  <button type="submit">Go</button>
-                </form>
-                <button onClick={() => setSelectedDateIndex(prev => Math.min(dateCount - 1, prev + 1))} disabled={dateIdx === dateCount - 1}>&gt;</button>
-                <button onClick={() => setSelectedDateIndex(dateCount - 1)} disabled={dateIdx === dateCount - 1}>&gt;&gt;</button>
-                <select value={dataType} onChange={e => setDataType(e.target.value)}>
-                  <option value="AvgTempF">Temperature (°F)</option>
-                  <option value="PrecipitationIn">Precipitation (in)</option>
-                  <option value="HumidityPct">Humidity (%)</option>
-                  <option value="WindSpeedMph">Wind Speed (mph)</option>
-                </select>
-                <span style={{ marginLeft: 16 }}>Current Date: <b>{selectedDate}</b></span>
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 24,
+                flexWrap: "wrap",
+                gap: 12
+              }}>
+                <label style={controlStyle}>
+                  Start Year:
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    value={startYear}
+                    onChange={e => setStartYear(Number(e.target.value))}
+                    style={inputSelectStyle}
+                  />
+                </label>
+                <label style={controlStyle}>
+                  End Year:
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    value={endYear}
+                    onChange={e => setEndYear(Number(e.target.value))}
+                    style={inputSelectStyle}
+                  />
+                </label>
+                <label style={controlStyle}>
+                  Start Month:
+                  <select
+                    value={startMonth}
+                    onChange={e => setStartMonth(e.target.value)}
+                    style={inputSelectStyle}>
+                    {monthsList.map(m => <option value={m} key={m}>{m}</option>)}
+                  </select>
+                </label>
+                <label style={controlStyle}>
+                  End Month:
+                  <select
+                    value={endMonth}
+                    onChange={e => setEndMonth(e.target.value)}
+                    style={inputSelectStyle}>
+                    {monthsList.map(m => <option value={m} key={m}>{m}</option>)}
+                  </select>
+                </label>
+                <label style={controlStyle}>
+                  Aggregation:
+                  <select
+                    value={aggType}
+                    onChange={e => setAggType(e.target.value)}
+                    style={inputSelectStyle}>
+                    {aggOptions.map(opt => <option value={opt.value} key={opt.value}>{opt.label}</option>)}
+                  </select>
+                </label>
+                <label style={controlStyle}>
+                  Data Type:
+                  <select
+                    value={dataType}
+                    onChange={e => setDataType(e.target.value)}
+                    style={inputSelectStyle}>
+                    {dataTypes.map(opt => <option value={opt.value} key={opt.value}>{opt.label}</option>)}
+                  </select>
+                </label>
               </div>
 
+              {/* Legend */}
               <Legend dataType={dataType} />
-              
+
+              {/* Maps */}
               {mapIndex === 0 && (
                 <>
                   <USMapBasic
                     mapWidth={MAP_WIDTH}
                     mapHeight={MAP_HEIGHT}
-                    fillColor={dataForDate.length > 0 ? getHeatColor(Number(dataForDate[0][dataType]), dataType) : "#DDD"}
+                    fillColor={countryWideValue !== null ? getHeatColor(countryWideValue, dataType) : "#DDD"}
                   />
                   <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
-                    {selectedDate}
-                    <br />
-                    {`${typeLabel[dataType]} Example: ${Number(dataForDate[0]?.[dataType] || 0).toFixed(2)} ${unit[dataType]}`}
+                    Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
                   </div>
                 </>
               )}
@@ -129,13 +241,11 @@ export default function App() {
                     }}
                   />
                   <div style={{ marginTop: 16, maxHeight: 250, overflowY: "auto" }}>
-                    <h3>
-                      State {typeLabel[dataType]} for {selectedDate}
-                    </h3>
+                    <h3>State {dataTypes.find(d => d.value === dataType).label} ({aggOptions.find(a => a.value === aggType).label}) for Selected Range</h3>
                     <ul>
-                      {dataForDate.map(row => (
-                        <li key={row.State}>
-                          {row.State}: {Number(row[dataType]).toFixed(2)} {unit[dataType]}
+                      {Object.entries(stateValueMap).map(([state, val]) => (
+                        <li key={state}>
+                          {state}: {val?.toFixed(2) ?? "N/A"}
                         </li>
                       ))}
                     </ul>
@@ -154,12 +264,14 @@ export default function App() {
                         maxWidth: 250
                       }}>
                         <strong>Selected State:</strong> {selectedState} <br />
-                        <strong>{typeLabel[dataType]}:</strong> {selectedStateValue?.toFixed(2)} {unit[dataType]}
+                        <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
                       </div>
                     )}
                   </div>
                 </>
               )}
+
+              {/* Map switch button */}
               <button onClick={handleNextMap} style={{ marginTop: 16 }}>
                 Switch Map
               </button>
