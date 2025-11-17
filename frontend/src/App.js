@@ -78,7 +78,7 @@ export default function App() {
 
   return (
     <div>
-      <h2>Climate America</h2>
+      <h2>Weather America</h2>
       <WeatherDataLoader>
         {(allDates, weatherDataByDate) => {
           const allRows = [];
@@ -239,16 +239,6 @@ export default function App() {
                       setSelectedStateValue(value);
                     }}
                   />
-                  <div style={{ marginTop: 16, maxHeight: 250, overflowY: "auto" }}>
-                    <h3>State {dataTypes.find(d => d.value === dataType).label} ({aggOptions.find(a => a.value === aggType).label}) for Selected Range</h3>
-                    <ul>
-                      {Object.entries(stateValueMap).map(([state, val]) => (
-                        <li key={state}>
-                          {state}: {val?.toFixed(2) ?? "N/A"}
-                        </li>
-                      ))}
-                    </ul>
-
                     {/* Display clicked state info */}
                     {selectedState && (
                       <div style={{
@@ -266,14 +256,31 @@ export default function App() {
                         <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
                       </div>
                     )}
-                  </div>
                 </>
               )}
 
               {/* Map switch button */}
-              <button onClick={handleNextMap} style={{ marginTop: 16 }}>
-                Switch Map
-              </button>
+              <div style={{
+                position: "fixed",
+                bottom: 30,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 1100
+              }}>
+                <button onClick={handleNextMap}
+                  style={{
+                    padding: "12px 36px",
+                    fontSize: "1.1rem",
+                    borderRadius: 7,
+                    border: "1px solid #333",
+                    background: "#fff",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
+                    cursor: "pointer"
+                  }}>
+                  Switch Map
+                </button>
+              </div>
+
             </>
           );
         }}
