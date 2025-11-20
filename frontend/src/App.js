@@ -28,6 +28,10 @@ const dataTypes = [
   { value: "WindSpeedMph", label: "Wind Speed (mph)" }
 ];
 
+function getMonthNumber(month, year, monthList) {
+  return Number(year) * 12 + monthList.indexOf(month);
+}
+
 export default function App() {
   const [mapIndex, setMapIndex] = useState(0);
   const [startMonth, setStartMonth] = useState("January");
@@ -82,22 +86,15 @@ export default function App() {
       <WeatherDataLoader>
         {(allDates, weatherDataByDate) => {
           const allRows = [];
-          const startMonthIdx = monthsList.indexOf(startMonth);
-          const endMonthIdx = monthsList.indexOf(endMonth);
+          const startNum = getMonthNumber(startMonth, startYear, monthsList);
+          const endNum = getMonthNumber(endMonth, endYear, monthsList);
 
           allDates.forEach(date => {
             const [month, year] = date.split(" ");
             const yearNum = parseInt(year);
-            const monthIdx = monthsList.indexOf(month);
+            const currentNum = getMonthNumber(month, yearNum, monthsList);
 
-            const isInRange = (startYear < endYear) || (startYear === endYear && startMonthIdx <= endMonthIdx)
-              ? ((yearNum > startYear && yearNum < endYear) ||
-                 (yearNum === startYear && monthIdx >= startMonthIdx) ||
-                 (yearNum === endYear && monthIdx <= endMonthIdx))
-              : ((yearNum > startYear || (yearNum === startYear && monthIdx >= startMonthIdx)) ||
-                 (yearNum < endYear || (yearNum === endYear && monthIdx <= endMonthIdx)));
-
-            if (isInRange) {
+            if (currentNum >= startNum && currentNum <= endNum) {
               weatherDataByDate[date]?.forEach(row => allRows.push(row));
             }
           });
@@ -128,12 +125,12 @@ export default function App() {
                 countryWideValue = countryValues.reduce((a, b) => a + (b - mean) ** 2, 0) / (countryValues.length - 1 || 1);
                 break;
               case "median":
-                const sorted = [...countryValues].sort((a,b) => a-b);
+                const sorted = [...countryValues].sort((a, b) => a - b);
                 const mid = Math.floor(sorted.length / 2);
-                countryWideValue = (sorted.length % 2 === 0) ? (sorted[mid-1] + sorted[mid]) / 2 : sorted[mid];
+                countryWideValue = (sorted.length % 2 === 0) ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
                 break;
               case "sum":
-                countryWideValue = countryValues.reduce((a,b) => a + b, 0);
+                countryWideValue = countryValues.reduce((a, b) => a + b, 0);
                 break;
               default:
                 countryWideValue = null;
@@ -239,23 +236,23 @@ export default function App() {
                       setSelectedStateValue(value);
                     }}
                   />
-                    {/* Display clicked state info */}
-                    {selectedState && (
-                      <div style={{
-                        position: "fixed",
-                        bottom: 20,
-                        right: 20,
-                        backgroundColor: "white",
-                        padding: 10,
-                        border: "1px solid black",
-                        boxShadow: "0 0 10px rgba(0,0,0,0.3)",
-                        zIndex: 1000,
-                        maxWidth: 250
-                      }}>
-                        <strong>Selected State:</strong> {selectedState} <br />
-                        <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
-                      </div>
-                    )}
+                  {/* Display clicked state info */}
+                  {selectedState && (
+                    <div style={{
+                      position: "fixed",
+                      bottom: 20,
+                      right: 20,
+                      backgroundColor: "white",
+                      padding: 10,
+                      border: "1px solid black",
+                      boxShadow: "0 0 10px rgba(0,0,0,0.3)",
+                      zIndex: 1000,
+                      maxWidth: 250
+                    }}>
+                      <strong>Selected State:</strong> {selectedState} <br />
+                      <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -280,7 +277,6 @@ export default function App() {
                   Switch Map
                 </button>
               </div>
-
             </>
           );
         }}

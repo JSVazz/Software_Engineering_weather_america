@@ -1,6 +1,5 @@
 // aggregateClimateData.js
 
-
 /**
  * Supported aggregation types: "avg", "variance", "min", "max", "median", "sum"
  * @param {Array} dataRows - Array of weather data rows (objects from WeatherDataLoader for multiple months/years)
@@ -23,57 +22,41 @@ export function aggregateClimateData(dataRows, options) {
     startMonth, endMonth, startYear, endYear, dataType, aggType
   } = options;
 
-  const startMonthIdx = months.indexOf(startMonth);
-  const endMonthIdx = months.indexOf(endMonth);
-
-  function inMonthYearRange(month, year) {
-    const mIdx = months.indexOf(month);
-    const y = Number(year);
-    if (startYear < endYear || (startYear === endYear && startMonthIdx <= endMonthIdx)) {
-      return (
-        y > startYear && y < endYear ||
-        (y === startYear && mIdx >= startMonthIdx) ||
-        (y === endYear && mIdx <= endMonthIdx)
-      );
-    } else {
-      return (
-        (y > startYear || (y === startYear && mIdx >= startMonthIdx)) ||
-        (y < endYear || (y === endYear && mIdx <= endMonthIdx))
-      );
-    }
+  function getMonthNumber(month, year) {
+    return Number(year) * 12 + months.indexOf(month);
   }
+
+  const startNum = getMonthNumber(startMonth, startYear);
+  const endNum = getMonthNumber(endMonth, endYear);
 
   const stateVals = {};
   dataRows.forEach(row => {
-    const month = row.Month, year = row.Year, state = row.State;
+    const { Month: month, Year: year, State: state } = row;
     const val = Number(row[dataType]);
-    if (inMonthYearRange(month, year) && !isNaN(val)) {
+    const num = getMonthNumber(month, year);
+    if (num >= startNum && num <= endNum && !isNaN(val)) {
       if (!stateVals[state]) stateVals[state] = [];
       stateVals[state].push(val);
     }
   });
 
   const aggFunc = {
-    avg: vals => vals.reduce((a,b) => a + b, 0) / vals.length,
+    avg: vals => vals.reduce((a, b) => a + b, 0) / vals.length,
     variance: vals => {
-      const mean = vals.reduce((a,b) => a + b, 0) / vals.length;
-      return vals.reduce((a,b) => a + (b-mean)**2, 0) / (vals.length-1 || 1);
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      return vals.reduce((a, b) => a + (b - mean) ** 2, 0) / (vals.length - 1 || 1);
     },
     min: vals => Math.min(...vals),
     max: vals => Math.max(...vals),
-    
     median: vals => {
       if (vals.length === 0) return null;
-      const sorted = [...vals].sort((a,b) => a - b);
+      const sorted = [...vals].sort((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
-      if (sorted.length % 2 === 0) {
-        return (sorted[mid - 1] + sorted[mid]) / 2;
-      } else {
-        return sorted[mid];
-      }
+      return (sorted.length % 2 === 0)
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
     },
-
-    sum: vals => vals.reduce((a,b) => a + b, 0)
+    sum: vals => vals.reduce((a, b) => a + b, 0)
   };
 
   const stateAgg = {};
