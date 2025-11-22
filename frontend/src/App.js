@@ -108,6 +108,8 @@ export default function App() {
             dataType, aggType
           });
 
+          const { minValue, maxValue } = getMinMaxValues(stateValueMap);
+
           const countryValues = allRows
             .map(row => Number(row[dataType]))
             .filter(val => !isNaN(val));
@@ -213,7 +215,12 @@ export default function App() {
               </div>
 
               {/* Legend */}
-              <Legend dataType={dataType} />
+              <Legend 
+                dataType={dataType} 
+                minValue={minValue}
+                maxValue={maxValue}
+                getHeatColor={getHeatColor}
+              />
 
               {/* Maps */}
               {mapIndex === 0 && (
