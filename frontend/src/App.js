@@ -2,9 +2,9 @@ import './App.css';
 import React, { useState } from "react";
 import USMapBasic from "./components/USMapBasic";
 import USMapStates from "./components/USMapStates";
-import USMapWithStatesCounties from "./components/USMapWithStatesCounties";
 import WeatherDataLoader from "./components/WeatherDataLoader";
 import Legend from "./components/Legend";
+import { getMinMaxValues } from './utilities/getMinMaxValues.js';
 import { aggregateClimateData } from "./components/AggClimateData.js";
 
 const MAP_HEIGHT = 750;
