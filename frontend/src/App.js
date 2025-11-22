@@ -77,6 +77,12 @@ export default function App() {
     boxSizing: "border-box"
   };
 
+  function normalizeValue(value, minValue, maxValue) {
+    if (value == null) return 0;
+    if (minValue === maxValue) return 0; // avoid division by zero
+    return ((value - minValue) / (maxValue - minValue)) * 100;
+  }
+
   return (
     <div>
       <h2>Climate America</h2>
@@ -228,7 +234,9 @@ export default function App() {
                   <USMapBasic
                     mapWidth={MAP_WIDTH}
                     mapHeight={MAP_HEIGHT}
-                    fillColor={countryWideValue !== null ? getHeatColor(countryWideValue, dataType) : "#DDD"}
+                    fillColor={countryWideValue !== null
+                      ? getHeatColor(normalizeValue(countryWideValue, minValue, maxValue), dataType)
+                      : "#DDD"}
                   />
                   <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
                     Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
@@ -241,7 +249,7 @@ export default function App() {
                     mapWidth={MAP_WIDTH}
                     mapHeight={MAP_HEIGHT}
                     stateTempMap={stateValueMap}
-                    getHeatColor={v => getHeatColor(v, dataType)}
+                    getHeatColor={v => getHeatColor(normalizeValue(v, minValue, maxValue), dataType)}
                     onStateClick={(stateName, value) => {
                       setSelectedState(stateName);
                       setSelectedStateValue(value);
