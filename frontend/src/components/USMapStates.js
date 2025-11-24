@@ -8,7 +8,7 @@ export default function USMapStates({
   mapHeight,
   stateTempMap,
   getHeatColor,
-  onStateClick,  // New prop
+  onStateClick,
 }) {
   return (
     <ComposableMap projection="geoAlbersUsa" width={mapWidth} height={mapHeight}>
