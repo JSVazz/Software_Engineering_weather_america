@@ -1,29 +1,35 @@
 import React from "react";
 
-export default function Legend({ dataType }) {
-  let gradientColors, minLabel, maxLabel, unit;
-
-  if (dataType === "AvgTempF") {
-    gradientColors = [`rgb(0, 0, 255)`, `rgb(255, 0, 0)`]; // blue to red
-    minLabel = "0 °F";
-    maxLabel = "100 °F";
-    unit = "°F";
-  } else if (dataType === "PrecipitationIn") {
-    gradientColors = [`rgb(0,0,0)`, `rgb(0,0,255)`]; // black to blue
-    minLabel = "0 in";
-    maxLabel = "6 in";
-    unit = "in";
-  } else if (dataType === "HumidityPct") {
-    gradientColors = [`rgb(0,0,0)`, `rgb(0,255,0)`]; // black to green
-    minLabel = "0 %";
-    maxLabel = "100 %";
-    unit = "%";
-  } else if (dataType === "WindSpeedMph") {
-    gradientColors = [`rgb(0,0,0)`, `rgb(255,255,255)`]; // black to white
-    minLabel = "0 mph";
-    maxLabel = "20 mph";
-    unit = "mph";
+export default function Legend({ dataType, minValue, maxValue, getHeatColor, steps = 5 }) {
+  // Prevent zero range to avoid division errors
+  let effectiveMax = maxValue;
+  if (minValue === maxValue) {
+    effectiveMax = minValue + 1;
   }
+
+  // Calculate labels and colors for each step
+  const stepSize = (effectiveMax - minValue) / steps;
+  const labels = [];
+  const colors = [];
+
+  for (let i = 0; i <= steps; i++) {
+    const value = minValue + i * stepSize;
+    labels.push(value);
+    const normalized = (value - minValue) / (effectiveMax - minValue);
+    colors.push(getHeatColor(normalized * 100, dataType));
+  }
+
+  // Construct CSS gradient string
+  const gradientStyle = `linear-gradient(to right, ${colors.join(", ")})`;
+
+  // Determine unit from dataType
+  const unitMap = {
+    AvgTempF: "°F",
+    PrecipitationIn: "in",
+    HumidityPct: "%",
+    WindSpeedMph: "mph"
+  };
+  const unit = unitMap[dataType] || "";
 
   return (
     <div style={{
@@ -38,19 +44,18 @@ export default function Legend({ dataType }) {
       fontSize: "0.9rem",
       zIndex: 1000,
       userSelect: "none",
+      fontFamily: "Arial, sans-serif"
     }}>
       <div style={{ marginBottom: 4 }}>Legend ({unit})</div>
-      <div style={{
-        height: "20px",
-        background: `linear-gradient(to right, ${gradientColors.join(", ")})`,
-      }}/>
+      <div style={{ height: "20px", background: gradientStyle }} />
       <div style={{
         display: "flex",
         justifyContent: "space-between",
         marginTop: 4,
+        fontWeight: "bold"
       }}>
-        <span>{minLabel}</span>
-        <span>{maxLabel}</span>
+        <span>{labels[0].toFixed(2)}</span>
+        <span>{labels[labels.length - 1].toFixed(2)}</span>
       </div>
     </div>
   );
