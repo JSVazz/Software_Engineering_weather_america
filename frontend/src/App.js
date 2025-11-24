@@ -4,6 +4,7 @@ import USMapBasic from "./components/USMapBasic";
 import USMapStates from "./components/USMapStates";
 import WeatherDataLoader from "./components/WeatherDataLoader";
 import Legend from "./components/Legend";
+import { getMinMaxValues } from './utilities/getMinMaxValues.js';
 import { aggregateClimateData } from "./components/AggClimateData.js";
 
 const MAP_HEIGHT = 750;
@@ -28,10 +29,6 @@ const dataTypes = [
   { value: "WindSpeedMph", label: "Wind Speed (mph)" }
 ];
 
-function getMonthNumber(month, year, monthList) {
-  return Number(year) * 12 + monthList.indexOf(month);
-}
-
 export default function App() {
   const [mapIndex, setMapIndex] = useState(0);
   const [startMonth, setStartMonth] = useState("January");
@@ -42,6 +39,7 @@ export default function App() {
   const [aggType, setAggType] = useState("avg");
   const [selectedState, setSelectedState] = useState(null);
   const [selectedStateValue, setSelectedStateValue] = useState(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   function getHeatColor(value, type) {
     if (type === "PrecipitationIn") {
@@ -80,21 +78,34 @@ export default function App() {
     boxSizing: "border-box"
   };
 
+  function normalizeValue(value, minValue, maxValue) {
+    if (value == null) return 0;
+    if (minValue === maxValue) return 0; // avoid division by zero
+    return ((value - minValue) / (maxValue - minValue)) * 100;
+  }
+
   return (
     <div>
       <h2>Weather America</h2>
       <WeatherDataLoader>
         {(allDates, weatherDataByDate) => {
           const allRows = [];
-          const startNum = getMonthNumber(startMonth, startYear, monthsList);
-          const endNum = getMonthNumber(endMonth, endYear, monthsList);
+          const startMonthIdx = monthsList.indexOf(startMonth);
+          const endMonthIdx = monthsList.indexOf(endMonth);
 
           allDates.forEach(date => {
             const [month, year] = date.split(" ");
             const yearNum = parseInt(year);
-            const currentNum = getMonthNumber(month, yearNum, monthsList);
+            const monthIdx = monthsList.indexOf(month);
 
-            if (currentNum >= startNum && currentNum <= endNum) {
+            const isInRange = (startYear < endYear) || (startYear === endYear && startMonthIdx <= endMonthIdx)
+              ? ((yearNum > startYear && yearNum < endYear) ||
+                 (yearNum === startYear && monthIdx >= startMonthIdx) ||
+                 (yearNum === endYear && monthIdx <= endMonthIdx))
+              : ((yearNum > startYear || (yearNum === startYear && monthIdx >= startMonthIdx)) ||
+                 (yearNum < endYear || (yearNum === endYear && monthIdx <= endMonthIdx)));
+
+            if (isInRange) {
               weatherDataByDate[date]?.forEach(row => allRows.push(row));
             }
           });
@@ -103,6 +114,8 @@ export default function App() {
             startMonth, endMonth, startYear, endYear,
             dataType, aggType
           });
+
+          const { minValue, maxValue } = getMinMaxValues(stateValueMap);
 
           const countryValues = allRows
             .map(row => Number(row[dataType]))
@@ -125,12 +138,12 @@ export default function App() {
                 countryWideValue = countryValues.reduce((a, b) => a + (b - mean) ** 2, 0) / (countryValues.length - 1 || 1);
                 break;
               case "median":
-                const sorted = [...countryValues].sort((a, b) => a - b);
+                const sorted = [...countryValues].sort((a,b) => a-b);
                 const mid = Math.floor(sorted.length / 2);
-                countryWideValue = (sorted.length % 2 === 0) ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+                countryWideValue = (sorted.length % 2 === 0) ? (sorted[mid-1] + sorted[mid]) / 2 : sorted[mid];
                 break;
               case "sum":
-                countryWideValue = countryValues.reduce((a, b) => a + b, 0);
+                countryWideValue = countryValues.reduce((a,b) => a + b, 0);
                 break;
               default:
                 countryWideValue = null;
@@ -208,8 +221,17 @@ export default function App() {
                 </label>
               </div>
 
+              <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
+                    Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
+              </div>
+
               {/* Legend */}
-              <Legend dataType={dataType} />
+              <Legend 
+                dataType={dataType} 
+                minValue={minValue}
+                maxValue={maxValue}
+                getHeatColor={getHeatColor}
+              />
 
               {/* Maps */}
               {mapIndex === 0 && (
@@ -217,11 +239,11 @@ export default function App() {
                   <USMapBasic
                     mapWidth={MAP_WIDTH}
                     mapHeight={MAP_HEIGHT}
-                    fillColor={countryWideValue !== null ? getHeatColor(countryWideValue, dataType) : "#DDD"}
+                    fillColor={countryWideValue !== null
+                      ? getHeatColor(normalizeValue(countryWideValue, minValue, maxValue), dataType)
+                      : "#DDD"}
                   />
-                  <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
-                    Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
-                  </div>
+                  
                 </>
               )}
               {mapIndex === 1 && (
@@ -230,53 +252,56 @@ export default function App() {
                     mapWidth={MAP_WIDTH}
                     mapHeight={MAP_HEIGHT}
                     stateTempMap={stateValueMap}
-                    getHeatColor={v => getHeatColor(v, dataType)}
+                    getHeatColor={v => getHeatColor(normalizeValue(v, minValue, maxValue), dataType)}
                     onStateClick={(stateName, value) => {
                       setSelectedState(stateName);
                       setSelectedStateValue(value);
                     }}
                   />
-                  {/* Display clicked state info */}
-                  {selectedState && (
-                    <div style={{
-                      position: "fixed",
-                      bottom: 20,
-                      right: 20,
-                      backgroundColor: "white",
-                      padding: 10,
-                      border: "1px solid black",
-                      boxShadow: "0 0 10px rgba(0,0,0,0.3)",
-                      zIndex: 1000,
-                      maxWidth: 250
-                    }}>
-                      <strong>Selected State:</strong> {selectedState} <br />
-                      <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
-                    </div>
-                  )}
+                  <div style={{ marginTop: 16, maxHeight: 250, overflowY: "auto" }}>
+                    {/* Display clicked state info */}
+                    {selectedState && (
+                      <div style={{
+                        position: "fixed",
+                        bottom: 20,
+                        right: 20,
+                        backgroundColor: "white",
+                        padding: 10,
+                        border: "1px solid black",
+                        boxShadow: "0 0 10px rgba(0,0,0,0.3)",
+                        zIndex: 1000,
+                        maxWidth: 250
+                      }}>
+                        <strong>Selected State:</strong> {selectedState} <br />
+                        <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
               {/* Map switch button */}
-              <div style={{
-                position: "fixed",
-                bottom: 30,
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 1100
-              }}>
-                <button onClick={handleNextMap}
-                  style={{
-                    padding: "12px 36px",
-                    fontSize: "1.1rem",
-                    borderRadius: 7,
-                    border: "1px solid #333",
-                    background: "#fff",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
-                    cursor: "pointer"
-                  }}>
-                  Switch Map
-                </button>
-              </div>
+              <button 
+                onClick={handleNextMap}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                style={{
+                  position: "fixed",
+                  bottom: 28,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 2000,
+                  padding: "10px 22px",
+                  fontSize: "1.15rem",
+                  borderRadius: 8,
+                  background: isHovered ? "#484d5dff" : "#6f7993ff",
+                  color: "#fff",
+                  border: "none",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.20)",
+                }}
+              >
+                Switch Map
+              </button>
             </>
           );
         }}
