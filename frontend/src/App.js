@@ -85,7 +85,7 @@ export default function App() {
 
   return (
     <div>
-      <h2>Climate America</h2>
+      <h2>Weather America</h2>
       <WeatherDataLoader>
         {(allDates, weatherDataByDate) => {
           const allRows = [];
@@ -220,6 +220,10 @@ export default function App() {
                 </label>
               </div>
 
+              <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
+                    Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
+              </div>
+
               {/* Legend */}
               <Legend 
                 dataType={dataType} 
@@ -238,9 +242,7 @@ export default function App() {
                       ? getHeatColor(normalizeValue(countryWideValue, minValue, maxValue), dataType)
                       : "#DDD"}
                   />
-                  <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
-                    Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
-                  </div>
+                  
                 </>
               )}
               {mapIndex === 1 && (
@@ -256,15 +258,6 @@ export default function App() {
                     }}
                   />
                   <div style={{ marginTop: 16, maxHeight: 250, overflowY: "auto" }}>
-                    <h3>State {dataTypes.find(d => d.value === dataType).label} ({aggOptions.find(a => a.value === aggType).label}) for Selected Range</h3>
-                    <ul>
-                      {Object.entries(stateValueMap).map(([state, val]) => (
-                        <li key={state}>
-                          {state}: {val?.toFixed(2) ?? "N/A"}
-                        </li>
-                      ))}
-                    </ul>
-
                     {/* Display clicked state info */}
                     {selectedState && (
                       <div style={{
@@ -287,7 +280,23 @@ export default function App() {
               )}
 
               {/* Map switch button */}
-              <button onClick={handleNextMap} style={{ marginTop: 16 }}>
+              <button 
+                onClick={handleNextMap} 
+                style={{
+                  position: "fixed",
+                  bottom: 28,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 2000,
+                  padding: "10px 22px",
+                  fontSize: "1.15rem",
+                  borderRadius: 8,
+                  background: "#2050d0",
+                  color: "#fff",
+                  border: "none",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.20)"
+                }}
+              >
                 Switch Map
               </button>
             </>
