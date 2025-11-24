@@ -39,6 +39,7 @@ export default function App() {
   const [aggType, setAggType] = useState("avg");
   const [selectedState, setSelectedState] = useState(null);
   const [selectedStateValue, setSelectedStateValue] = useState(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   function getHeatColor(value, type) {
     if (type === "PrecipitationIn") {
@@ -281,7 +282,9 @@ export default function App() {
 
               {/* Map switch button */}
               <button 
-                onClick={handleNextMap} 
+                onClick={handleNextMap}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 style={{
                   position: "fixed",
                   bottom: 28,
@@ -291,10 +294,10 @@ export default function App() {
                   padding: "10px 22px",
                   fontSize: "1.15rem",
                   borderRadius: 8,
-                  background: "#2050d0",
+                  background: isHovered ? "#484d5dff" : "#6f7993ff",
                   color: "#fff",
                   border: "none",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.20)"
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.20)",
                 }}
               >
                 Switch Map
