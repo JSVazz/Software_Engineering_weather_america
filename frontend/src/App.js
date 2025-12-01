@@ -150,6 +150,10 @@ export default function App() {
             }
           }
 
+          const aggLabel = aggOptions.find(a => a.value === aggType).label;
+          const dataTypeLabel = dataTypes.find(d => d.value === dataType).label;
+          const unit = dataTypeLabel.match(/\((.*)\)/)?.[1] ?? "";
+
           return (
             <>
               {/* Controls */}
@@ -222,7 +226,8 @@ export default function App() {
               </div>
 
               <div style={{ margin: "16px 0", fontSize: "1.2rem" }}>
-                    Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
+                Nationwide {aggOptions.find(a => a.value === aggType).label} {dataTypes.find(d => d.value === dataType).label}: {countryWideValue?.toFixed(2) ?? "N/A"}
+              {unit}
               </div>
 
               {/* Legend */}
@@ -273,7 +278,7 @@ export default function App() {
                         maxWidth: 250
                       }}>
                         <strong>Selected State:</strong> {selectedState} <br />
-                        <strong>{dataTypes.find(d => d.value === dataType).label}:</strong> {selectedStateValue?.toFixed(2)} {dataTypes.find(d => d.value === dataType).label.match(/\((.*)\)/)?.[1] ?? ""}
+                        <strong>{aggLabel} {dataTypeLabel}:</strong> {selectedStateValue?.toFixed(2)} {unit}
                       </div>
                     )}
                   </div>
